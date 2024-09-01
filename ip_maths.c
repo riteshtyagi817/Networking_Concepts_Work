@@ -3,6 +3,8 @@
 #include<string.h>
 #include<ctype.h>
 #include<stdlib.h>
+#include<math.h>
+#include<stdbool.h>
 #define PREFIX_LEN 16
 
 // although it would be a longer program but just for practice doing it in a single file
@@ -188,18 +190,163 @@ void get_broadcast_address(char input_ip[], uint8_t mask, char brd_addr[])
 	return;
 }
 
+int get_ip_integer_equivalent(char input_ip[])
+{
+	unsigned int result  = 0;
+	
+	char dot_pos_store[4];
+	memset(dot_pos_store,0,4);
+	find_decimal_pos(input_ip, dot_pos_store);
+	uint8_t value = 0;
+        uint8_t first_octet = convert_into_integer(input_ip,1,dot_pos_store);
+	uint8_t second_octet = convert_into_integer(input_ip,2,dot_pos_store);
+	uint8_t third_octet = convert_into_integer(input_ip,3, dot_pos_store);
+	uint8_t fourth_octet = convert_into_integer(input_ip,4,dot_pos_store);
+      
 
-int main()
+	result |= first_octet;
+	result <<= 8;
+	result  |= second_octet;
+	result <<= 8;
+	result  |= third_octet;
+	result <<= 8;
+
+	result |= fourth_octet;
+
+
+
+
+	return result;
+}
+void abcd_ip_format(unsigned int ipAddr, char *outputBuffer){
+
+	int idx = 0;
+	int num = 4;
+	while(num > 0)
+	{
+		unsigned int value = octet_value_from_right(ipAddr, num);
+		printf("Octet: %d from right is %d\n",num, value);
+		int start = idx;
+		if(value == 0){
+			outputBuffer[idx++] = '0';
+		}
+		else
+		{
+			while(value)
+			{
+				outputBuffer[idx++] = (value%10)+'0';
+				value /= 10;
+			}
+		}
+		int end = idx-1;
+		while(start < end)
+		{
+			char tmp = outputBuffer[start];
+			outputBuffer[start] = outputBuffer[end];
+			outputBuffer[end] = tmp;
+			start++;
+			end--;
+		}
+		outputBuffer[idx++] = '.';
+		num--;
+	}
+	idx--;
+	outputBuffer[idx] = '\0';
+
+	return ;
+}
+void printBits(unsigned int ip, uint8_t count)
+{
+	
+	if(count == 1){
+		
+		if(ip & 1)  printf("1");
+		else printf("0");
+		return;
+	}
+	printBits( (ip >>= 1), count-1);
+	if(ip & 1)  printf("1");
+	else printf("0");
+	return;
+	
+
+
+}
+void get_network_ip(char *input_ip, char *out_ip, uint8_t mask){
+
+	unsigned int ip_int = get_ip_integer_equivalent(input_ip);
+	printf("\n");
+	printBits(ip_int,32);
+	printf("\n");
+
+	uint8_t count = 32 - mask;
+	unsigned int maskValue = 0xFFFFFFFF;
+
+	while(count--){
+		maskValue <<= 1;
+	}	
+	unsigned int result = (ip_int & maskValue);
+	printf("result Print %u\n",result);
+	printf("\n");
+	printBits(result,32);
+	printf("\n");
+	abcd_ip_format(result, out_ip);
+	
+	return;
+}
+bool check_ip_subnet_membership(char *network_id, uint8_t mask, char *check_ip){
+
+	bool result = false;
+
+	char net_id[PREFIX_LEN];
+	memset(net_id,'\0', PREFIX_LEN);
+	
+	char input_ip[PREFIX_LEN];
+	memset(input_ip,'\0', PREFIX_LEN);
+	strncpy(input_ip,check_ip,PREFIX_LEN);
+	get_network_ip(input_ip, net_id, mask);
+
+	unsigned int net_ip = get_ip_integer_equivalent(net_id);	
+	char net_provided[PREFIX_LEN];
+	memset(net_provided,'\0', PREFIX_LEN);
+	strncpy(net_provided,network_id,PREFIX_LEN);
+
+	unsigned int int_net_provided = get_ip_integer_equivalent(net_provided);
+
+	if(net_ip == int_net_provided) return true;
+	else return false;
+
+
+}
+
+int get_sub_net_cardinality(uint8_t mask){
+	
+	uint8_t value = 32 - mask;
+	int result = pow(2,value);
+	result -= 2;
+
+
+
+
+	return result;
+
+
+}
+
+
+int main(int argc, char *argv[])
 {
 	// usage of funtion get_broadcast_address
 
 	// Output and input arrays to store the output broadcast address and input ip address
 	char brd_addr[PREFIX_LEN];
 	char input_ip[PREFIX_LEN];
+	char ipadd_buffer[PREFIX_LEN];
 
 	// output and input arrays initialization using memset
 	memset(brd_addr, '\0', PREFIX_LEN);
 	memset(input_ip,0,PREFIX_LEN);
+	memset(ipadd_buffer,0,PREFIX_LEN);
 
 	// taking input from the user
 	printf("Enter the ip address in the format A.B.C.D for which you want to display broadcast address\n");
@@ -217,5 +364,46 @@ int main()
 	// printing the broadcast address 
 	printf("Broadcast address of input ip %s is %s\n", input_ip, brd_addr);
 		
+	printf("The Ip Integer of given input ip is %u\n", get_ip_integer_equivalent(input_ip));
+	unsigned int ipAddr;
+	printf("Enter the ip Address in integer format: ");
+	scanf("%u", &ipAddr);
+	abcd_ip_format(ipAddr, ipadd_buffer);
+	printf("Ip address abcd format of input  %u is %s\n", ipAddr,ipadd_buffer);
+
+
+	memset(ipadd_buffer,0,PREFIX_LEN);
+		
+	get_network_ip(input_ip, ipadd_buffer,mask);
+
+	printf("Network IP of input ip %s is %s\n", input_ip, ipadd_buffer);
+	
+
+	printf("subnet cardianality is %d\n", get_sub_net_cardinality(mask));
+
+
+	char *network_id = "192.168.0.0";
+	//char *ck_ip = "192.168.0.13";
+	char *check_ip = NULL;
+	//printf("if you want to manual give the ip to check for ip subnet membership , provide it as a first arg of this program\n");
+	if(argc > 1){
+		check_ip = argv[1];
+
+	}
+	else{
+		check_ip = "192.169.0.13";
+	}
+	
+	bool result = check_ip_subnet_membership(network_id, mask, check_ip);
+
+	if(result){
+		printf("%s is a member of subnet %s and mask %u\n", check_ip, network_id, mask);
+	}
+	else{
+
+		printf("%s is not a member of subnet %s and mask %u\n", check_ip, network_id, mask);
+
+	}
+
 	return 0;
 }
