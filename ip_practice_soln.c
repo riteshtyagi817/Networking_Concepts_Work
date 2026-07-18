@@ -71,6 +71,34 @@ void get_network_id(char *ip_address, char mask, char *output_buffer){
 	inet_ntop(AF_INET, &network_id, output_buffer, PREFIX_LEN + 1);
 
 }
+unsigned int get_subnet_cardinality(char mask_value){
+
+	return pow(2,MAX_MASK_LEN - mask_value) - 2;
+
+}
+/* Return 0 if true else -1 if false */
+int check_ip_subnet_membership(char *network_id,
+			 char  mask,
+			 char *check_ip){
+
+	//printf("network_id = %s\n",network_id);
+	//printf("check_ip = %s\n",check_ip);
+	unsigned int check_ip_integer = 0;
+	inet_pton(AF_INET,check_ip, &check_ip_integer);
+	check_ip_integer = ntohl(check_ip_integer);
+	//printf("check_ip_integer %u\n",check_ip_integer);
+	unsigned int mask_integer = get_mask_value_in_integer(mask);
+	//printf("mask_integer %u\n",mask_integer);
+	unsigned int calculated_nw_id = (check_ip_integer &  mask_integer);
+	unsigned int network_id_integer = 0;
+	inet_pton(AF_INET, network_id, &network_id_integer);
+	network_id_integer = ntohl(network_id_integer);
+	//printf("network_id_int %u and calculated_network_id %u\n",network_id_integer,
+	//calculated_nw_id);
+	if(network_id_integer == calculated_nw_id)
+		return 0;
+	return -1;
+}
 int main(int argc, char *argv[]){
 
 /* Testing get broadcast address */
@@ -134,10 +162,33 @@ int main(int argc, char *argv[]){
 	printf("Testing Q4 done.\n");
 
 }
+/* Testing get_subnet_cardianality() */
+{
+	printf("Testing Q5..\n");
+	char mask = 24;
+	printf("Cardinality = %u\n",get_subnet_cardinality(mask));
+	printf("Testing Q5 done.\n");
+
+}
+/* Testing check_ip_subnet_membership */
+{
+	printf("Testing Q6\n");
+	char network_id[PREFIX_LEN+1];
+	memset(network_id, '\0',sizeof(network_id));
+	strncpy(network_id, "192.168.1.0", strlen("192.168.1.0"));
+	char mask = 24;
+	char ip_address[PREFIX_LEN+1];
+	memset(ip_address, '\0',sizeof(ip_address));
+	strncpy(ip_address, "192.168.1.10",strlen("192.168.1.10"));
+	int res  = check_ip_subnet_membership(network_id, mask, ip_address);
+	printf("IP Subnet check result = %s\n",res == 0?"Membership true":"Membership false");
+	printf("Testing Q6 done\n");
+
+}
 
 
 	
 
-
+	return 0;
 
 }
